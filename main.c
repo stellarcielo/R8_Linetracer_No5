@@ -5,7 +5,7 @@
 // インクルード指定：<stdio.h> <stdlib.h> <pigpiod_lf2.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <pigpiod_lf2.h>
+#include <pigpiod_if2.h>
 // 以下、定数宣言です
 // PWM ユニットの I2C アドレス
 // i2cdetect で確認可能、違っていたら修正して下さい
