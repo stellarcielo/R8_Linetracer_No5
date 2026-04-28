@@ -16,9 +16,9 @@
 // 右側のモーター：パワーユニットの K1 または K2 に接続（説明書は誤り）
 // ENA は PWM 駆動に使う（1 でブリッジ動作、0 はブリッジオフ）
 // IN1 と IN2 は右車輪の回転方向を決める（後進：0,1、前進：1,0）（0,0 と 1,1 はブレーキ）
-#define ENA_PWM 8
-#define IN1_PWM 9
-#define IN2_PWM 10
+#define ENA_PWM 0
+#define IN1_PWM 1
+#define IN2_PWM 0
 // 左側のモーター：パワーユニットの K3 または K4 に接続（説明書は誤り）
 // ENB は PWM 駆動に使う（1 でブリッジ動作、0 はブリッジオフ）
 // IN3 と IN4 は左車輪の回転方向を決める（後進：0,1、前進：1,0）（0,0 と 1,1 はブレーキ）
@@ -135,5 +135,5 @@ int main(){
     i2c_write_byte_data(pd, fd,PWM_MODE1, 0); //normal mode
     time_sleep(0.001); // wait for stabilizing internal oscillator
     i2c_write_byte_data(pd, fd,PWM_MODE1, 0x80); //Restart all PWM ch
-    motor_drive(pd, fd, 0, 0); //Stop left and right motor
+    motor_drive(pd, fd, 8, 8); //Stop left and right motor
 }
