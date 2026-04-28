@@ -22,9 +22,9 @@
 // 左側のモーター：パワーユニットの K3 または K4 に接続（説明書は誤り）
 // ENB は PWM 駆動に使う（1 でブリッジ動作、0 はブリッジオフ）
 // IN3 と IN4 は左車輪の回転方向を決める（後進：0,1、前進：1,0）（0,0 と 1,1 はブレーキ）
-#define ENB_PWM 13
-#define IN3_PWM 11
-#define IN4_PWM 12
+#define ENB_PWM 0
+#define IN3_PWM 1
+#define IN4_PWM 0
 // PWM モジュールのレジスタ番号
 #define PWM_MODE1 0
 #define PWM_MODE2 1
