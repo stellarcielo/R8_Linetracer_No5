@@ -2,7 +2,7 @@
 // Created by stellarcielo on 2026/04/14.
 //
 
-// インクルード指定：<stdio.h> <stdlib.h> <pigpiod_lf2.h>
+// インクルード指定：<stdio.h> <stdlib.h> <pigpiod_if2.h>
 // 以下、定数宣言です
 #include <stdio.h>
 #include <stdlib.h>
@@ -11,7 +11,7 @@
 // i2cdetect で確認可能、違っていたら修正して下さい
 #define PWMI2CADR 0x40
 // PWM ユニットが接続されている I2C のチャネル番号
-#define PWMI2CCH 20
+#define PWMI2CCH 1
 // モータードライバの各入力が接続されている PWM ユニットのチャネル番号
 // 右側のモーター：パワーユニットの K1 または K2 に接続（説明書は誤り）
 // ENA は PWM 駆動に使う（1 でブリッジ動作、0 はブリッジオフ）
@@ -137,6 +137,7 @@ int main(){
     i2c_write_byte_data(pd, fd,PWM_MODE1, 0xA0); //Restart all PWM ch
     motor_drive(pd, fd, 0, 0); //Stop left and right motor
 
+    //samp
     motor_drive(pd, fd, 16, 16);
     time_sleep(2.0);
     motor_drive(pd, fd, 0, 0);
