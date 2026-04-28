@@ -135,5 +135,9 @@ int main(){
     i2c_write_byte_data(pd, fd,PWM_MODE1, 0); //normal mode
     time_sleep(0.001); // wait for stabilizing internal oscillator
     i2c_write_byte_data(pd, fd,PWM_MODE1, 0x80); //Restart all PWM ch
-    motor_drive(pd, fd, 8, 8); //Stop left and right motor
+    motor_drive(pd, fd, 0, 0); //Stop left and right motor
+
+    motor_drive(pd, fd, 16, 16);
+    time_sleep(2.0);
+    motor_drive(pd, fd, 0, 0);
 }
