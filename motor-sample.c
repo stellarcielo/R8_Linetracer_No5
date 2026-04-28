@@ -3,15 +3,15 @@
 //
 
 // インクルード指定：<stdio.h> <stdlib.h> <pigpiod_lf2.h>
+// 以下、定数宣言です
 #include <stdio.h>
 #include <stdlib.h>
 #include <pigpiod_if2.h>
-// 以下、定数宣言です
 // PWM ユニットの I2C アドレス
 // i2cdetect で確認可能、違っていたら修正して下さい
 #define PWMI2CADR 0x40
 // PWM ユニットが接続されている I2C のチャネル番号
-#define PWMI2CCH 1
+#define PWMI2CCH 20
 // モータードライバの各入力が接続されている PWM ユニットのチャネル番号
 // 右側のモーター：パワーユニットの K1 または K2 に接続（説明書は誤り）
 // ENA は PWM 駆動に使う（1 でブリッジ動作、0 はブリッジオフ）
@@ -118,15 +118,15 @@ int main(){
     pd = pigpio_start(NULL, NULL);
     if (pd < 0)
     {
-        printf("pigpiod の接続に失敗しました。¥n");
-        printf("pigpiod が起動しているか確認してください。¥n");
+        fprintf(stderr, "pigpiod の接続に失敗しました。\n");
+        fprintf(stderr, "pigpiod が起動しているか確認してください。\n");
         exit(EXIT_FAILURE);
     }
     // I2C 接続と PWM ユニットの初期化
     fd = i2c_open(pd,PWMI2CCH,PWMI2CADR, 0);
     if (fd < 0)
     {
-        printf("I2C の初期化に失敗しました。終了します。¥n");
+        fprintf(stderr, "I2C の初期化に失敗しました。終了します。\n");
         exit(EXIT_FAILURE);
     }
     i2c_write_byte_data(pd, fd,PWM_PRESCALE, 61); //PWM 周期 10ms に設定
