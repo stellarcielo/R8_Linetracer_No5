@@ -183,7 +183,7 @@ void controlLineTracePD(int pd, int fd, uint8_t sensors)
         g_state.prev_error_scaled = 0;
         g_state.filtered_d = 0;
         g_state.lost_loops = 0;
-        motor_drive(pd, fd, BASE_SPEED, BASE_SPEED);
+        motor_drive(pd, fd, 0, 0);
         return;
     }
 
