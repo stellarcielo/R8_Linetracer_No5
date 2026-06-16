@@ -49,7 +49,7 @@
  * Dローパスフィルタ係数 (0〜255, 大きいほど平滑)
  * filtered_d = (LPF_ALPHA * filtered_d + (256 - LPF_ALPHA) * raw_d) / 256
  */
-#define LPF_ALPHA 180
+#define LPF_ALPHA 200
 
 /*
  * ライン消失タイムアウト（ループ回数）
