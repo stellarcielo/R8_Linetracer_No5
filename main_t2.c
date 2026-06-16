@@ -13,7 +13,7 @@
 #define SENSOR_COUNT 5
 
 #define PWMI2CADR 0x40
-#define PWMI2CCH 1
+#define PWMI2CCH  1
 
 #define PWM_MODE1    0x00
 #define PWM_MODE2    0x01
@@ -34,39 +34,41 @@
 #define MOTOR_MAX  16
 #define MOTOR_MIN -16
 
-/*
- * ライントレース制御パラメータ
- * KP/KD はスケール済みエラー（実値×10）に対して作用する
- * turn = KP * error_scaled / 10 + KD * filtered_d / 10 で最終値を戻す
- */
 #define BASE_SPEED 8
-#define KP_NUM 4    /* KP = KP_NUM / KP_DEN */
+
+/*
+ * KP/KD はスケール済みエラー（重み×10）に対して作用する
+ * turn = KP_NUM * error_scaled / KP_DEN + ...
+ * 蛇行が多い場合: KP_NUMを下げる、KD_NUMを上げる、LPF_ALPHAを上げる
+ */
+#define KP_NUM 3
 #define KP_DEN 10
-#define KD_NUM 3
+#define KD_NUM 5
 #define KD_DEN 10
 
 /*
- * Dローパスフィルタ係数 (0〜255, 大きいほど平滑)
- * filtered_d = (LPF_ALPHA * filtered_d + (256 - LPF_ALPHA) * raw_d) / 256
+ * Dローパスフィルタ係数 (0〜255)
+ * 大きいほど平滑（過去値の重みが増す）
+ * 蛇行が多い場合: 200〜220 を試す
  */
-#define LPF_ALPHA 200
+#define LPF_ALPHA 210
 
 /*
  * ライン消失タイムアウト（ループ回数）
- * 10ms × 100 = 1秒で停止
+ * 20ms × 75 = 1.5秒で停止
  */
-#define LOST_TIMEOUT_LOOPS 100
+#define LOST_TIMEOUT_LOOPS 75
 
 #define LINE_DETECTED_VALUE 1
 
 /* ------------------------------------------------------------------ */
 
 typedef struct {
-    int error_scaled;    /* 現在エラー ×10 */
+    int error_scaled;
     int prev_error_scaled;
-    int filtered_d;      /* LPFかけたderivative ×10 */
-    int last_error_sign; /* -1, 0, 1 */
-    int lost_loops;      /* ライン消失継続カウント */
+    int filtered_d;
+    int last_error_sign;
+    int lost_loops;
 } PdState;
 
 static volatile sig_atomic_t running = 1;
@@ -104,7 +106,7 @@ int main(void)
         uint8_t sensors = readSensorsAsBits(pd);
         printf("sensors = 0x%02X\n", sensors);
         controlLineTracePD(pd, fd, sensors);
-        time_sleep(0.01);
+        time_sleep(0.02); /* 20ms周期 */
     }
 
     printf("Stopping...\n");
@@ -166,24 +168,19 @@ uint8_t readSensorsAsBits(int pd)
 
 void controlLineTracePD(int pd, int fd, uint8_t sensors)
 {
-    /*
-     * 重みを ×10 にスケールアップ: -20, -10, 0, 10, 20
-     * → エラーの分解能が整数除算でも細かくなる
-     */
     const int weights[SENSOR_COUNT] = {-20, -10, 0, 10, 20};
 
     int left_speed, right_speed;
 
     /*
-     * 全センサーON = 黒べた上 → 直進扱い
+     * 全センサーON = スタート/ストップ合図
+     * 状態をリセットして停止
      */
     if (sensors == 0x1F)
     {
-        g_state.error_scaled = 0;
-        g_state.prev_error_scaled = 0;
-        g_state.filtered_d = 0;
-        g_state.lost_loops = 0;
+        g_state = (PdState){0};
         motor_drive(pd, fd, 0, 0);
+        printf("Start signal detected. Stopped.\n");
         return;
     }
 
@@ -201,24 +198,24 @@ void controlLineTracePD(int pd, int fd, uint8_t sensors)
     {
         g_state.lost_loops = 0;
 
-        int error_scaled = sum / count; /* 単位は元の重み×10 */
+        int error_scaled = sum / count;
 
         /*
-         * Derivative（生値）にLPFをかけてノイズ低減
-         * filtered_d は ×10 スケール
+         * 中央センサー(S3)のみ反応 = ライン中央
+         * 微小な誤差扱いでゼロにして無駄な修正を抑える
          */
+        if (count == 1 && (sensors & (1U << 2)))
+            error_scaled = 0;
+
         int raw_d = error_scaled - g_state.prev_error_scaled;
         g_state.filtered_d =
             (LPF_ALPHA * g_state.filtered_d + (256 - LPF_ALPHA) * raw_d) / 256;
 
         g_state.prev_error_scaled = error_scaled;
-        g_state.error_scaled = error_scaled;
-        g_state.last_error_sign = (error_scaled > 0) ? 1 : (error_scaled < 0) ? -1 : 0;
+        g_state.error_scaled      = error_scaled;
+        g_state.last_error_sign   = (error_scaled > 0) ? 1
+                                  : (error_scaled < 0) ? -1 : 0;
 
-        /*
-         * turn = KP * error + KD * filtered_d
-         * スケール ×10 を /10 で戻す
-         */
         int turn = KP_NUM * error_scaled / KP_DEN
                  + KD_NUM * g_state.filtered_d / KD_DEN;
 
@@ -227,21 +224,16 @@ void controlLineTracePD(int pd, int fd, uint8_t sensors)
     }
     else
     {
-        /*
-         * ライン消失
-         */
         g_state.lost_loops++;
 
         if (g_state.lost_loops >= LOST_TIMEOUT_LOOPS)
         {
-            /* タイムアウト：安全停止 */
             printf("Line lost timeout. Stopping.\n");
             running = 0;
             motor_drive(pd, fd, 0, 0);
             return;
         }
 
-        /* 消失直後：最後に見えた方向へ旋回 */
         if (g_state.last_error_sign < 0)
         {
             left_speed  = -5;
@@ -310,11 +302,11 @@ int motor_drive(int pd, int fd, int left_motor, int right_motor)
     int left_pwm  = abs(left_motor)  * PWM_MAX_COUNT / MOTOR_MAX;
     int right_pwm = abs(right_motor) * PWM_MAX_COUNT / MOTOR_MAX;
 
-    if (left_motor > 0)       { set_pwm_full_on(pd, fd, IN3_PWM); set_pwm_full_off(pd, fd, IN4_PWM); }
+    if (left_motor > 0)       { set_pwm_full_on(pd, fd, IN3_PWM);  set_pwm_full_off(pd, fd, IN4_PWM); }
     else if (left_motor < 0)  { set_pwm_full_off(pd, fd, IN3_PWM); set_pwm_full_on(pd, fd, IN4_PWM); }
     else                      { set_pwm_full_off(pd, fd, IN3_PWM); set_pwm_full_off(pd, fd, IN4_PWM); }
 
-    if (right_motor > 0)      { set_pwm_full_on(pd, fd, IN1_PWM); set_pwm_full_off(pd, fd, IN2_PWM); }
+    if (right_motor > 0)      { set_pwm_full_on(pd, fd, IN1_PWM);  set_pwm_full_off(pd, fd, IN2_PWM); }
     else if (right_motor < 0) { set_pwm_full_off(pd, fd, IN1_PWM); set_pwm_full_on(pd, fd, IN2_PWM); }
     else                      { set_pwm_full_off(pd, fd, IN1_PWM); set_pwm_full_off(pd, fd, IN2_PWM); }
 
