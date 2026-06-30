@@ -108,6 +108,7 @@ int main(void)
         {
         case 'a': case 'A': left = -TURN_SPEED; right =  TURN_SPEED; break;
         case 'd': case 'D': left =  TURN_SPEED; right = -TURN_SPEED; break;
+        case 'w': case 'W': left =  DRIVE_SPEED; right = DRIVE_SPEED; break;
         default: break;
         }
 
