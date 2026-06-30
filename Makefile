@@ -16,5 +16,8 @@ main_t:	main_t.o
 main_t2:	main_t2.o
 	$(CC) $(CFLAGS) -o $@ $^ -lpigpiod_if2 -lrt
 
+manual_drive:	manual_drive.o
+	$(CC) $(CFLAGS) -o $@ $^ -lpigpiod_if2 -lrt
+
 clean:
 	rm -f *.o $(BIN)
