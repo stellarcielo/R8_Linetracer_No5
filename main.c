@@ -94,7 +94,7 @@ int main(void){
             // ↑→.
             motor_drive(pd, fd, 8, 3);
         }else{
-            motor_drive(pd, fd, 8, -4);
+            motor_drive(pd, fd, 8, -8);
         }
 
         time_sleep(0.01);
