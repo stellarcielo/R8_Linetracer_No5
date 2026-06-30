@@ -33,7 +33,7 @@
 
 /* ---- 操作設定 ---- */
 #define DRIVE_SPEED   10
-#define TURN_SPEED     5
+#define TURN_SPEED 7
 #define KEY_TIMEOUT_SEC 0.20   /* これより長くキーが来なければ停止 */
 
 /* ------------------------------------------------------------------ */
