@@ -31,6 +31,11 @@
 #define DRIVE_SPEED  10   /* w: 前進速度 */
 #define TURN_SPEED   8    /* a/d: 旋回速度（片側逆転） */
 
+/* ---- 操作設定 ---- */
+#define DRIVE_SPEED   10
+#define TURN_SPEED     8
+#define KEY_TIMEOUT_SEC 0.10   /* これより長くキーが来なければ停止 */
+
 /* ------------------------------------------------------------------ */
 
 static volatile sig_atomic_t running = 1;
@@ -79,7 +84,8 @@ int main(void)
      * 新しいキーが来なければ同じ動作を継続する。
      * q が来たら停止して終了。
      */
-    char last_cmd = 0;
+    double last_key_time = 0.0;
+    char   last_cmd      = 0;
 
     while (running)
     {
@@ -87,40 +93,27 @@ int main(void)
 
         if (c != -1)
         {
-            if (c == 'q' || c == 'Q')
-            {
-                running = 0;
-                break;
-            }
-            last_cmd = (char)c;
+            if (c == 'q' || c == 'Q') { running = 0; break; }
+            last_cmd      = (char)c;
+            last_key_time = time_time();   /* 受信時刻を更新 */
         }
 
-        int left  = 0;
-        int right = 0;
+        /* タイムアウトで強制停止 */
+        double idle = time_time() - last_key_time;
+        if (idle > KEY_TIMEOUT_SEC)
+            last_cmd = 0;
 
+        int left = 0, right = 0;
         switch (last_cmd)
         {
-        case 'a': case 'A':
-            /* 左旋回：左後退・右前進 */
-            left  = -TURN_SPEED;
-            right =  TURN_SPEED;
-            break;
-
-        case 'd': case 'D':
-            /* 右旋回：左前進・右後退 */
-            left  =  TURN_SPEED;
-            right = -TURN_SPEED;
-            break;
-
-        default:
-            left  = 0;
-            right = 0;
-            break;
+        case 'a': case 'A': left = -TURN_SPEED; right =  TURN_SPEED; break;
+        case 'd': case 'D': left =  TURN_SPEED; right = -TURN_SPEED; break;
+        default: break;
         }
 
         motor_drive(pd, fd, left, right);
-
-        printf("\rcmd=%c  L=%+3d R=%+3d   ", last_cmd ? last_cmd : '-', left, right);
+        printf("\rcmd=%c  idle=%.2fs  L=%+3d R=%+3d   ",
+               last_cmd ? last_cmd : '-', idle, left, right);
         fflush(stdout);
 
         time_sleep(0.02);
