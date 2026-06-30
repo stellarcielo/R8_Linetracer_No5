@@ -8,6 +8,7 @@
 #include <unistd.h>
 #include <stdbool.h>
 #include <pigpiod_if2.h>
+#include <stdint.h>
 #include <strings.h>
 #include <bits/sigaction.h>
 
@@ -57,14 +58,14 @@
 void initHard(int *pd, int *fd);
 void sigHandler(int sig);
 int motor_drive(int pd, int fd, int lm, int rm);
-void readAllSensors(int pd, int gpios[], char sensors[]);
+void readAllSensors(int pd, int gpios[], uint8_t sensors[]);
 
 volatile sig_atomic_t running = 1;
 
 int main(void){
     int pd, fd;
     int gpios[] = {S1, S2, S3, S4, S5};
-    char sensors = 0x00; //1バイトの変数のためcharを使っています。5つのセンサーをまとめてビット列で管理するためです.
+    uint8_t sensors = 0x00; //1バイトの変数のためcharを使っています。5つのセンサーをまとめてビット列で管理するためです.
 
     signal(SIGINT, sigHandler);
     signal(SIGTERM, sigHandler);
@@ -139,7 +140,7 @@ void initHard(int *pd, int *fd){
     printf("Init success.\n");
 }
 
-void readAllSensors(int pd, int gpios[], char *sensors){
+void readAllSensors(int pd, int gpios[], uint8_t *sensors){
     //printf("r");
     *sensors = 0x00;
     for (int i = 0; i < 5; i++)
