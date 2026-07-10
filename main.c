@@ -96,6 +96,12 @@ int main(void){
         }else if ((sensors & 0x1F) == 0b00001000){
             // ↑→.
             motor_drive(pd, fd, BASE_SPEED, BASE_SPEED/2);
+        }else if ((sensors & 0x1F) == 0b00010000){
+            motor_drive(pd, fd, BASE_SPEED/2, 0);
+            checkpoint += 1;
+        }else if ((sensors & 0x1F) == 0b00000001){
+            motor_drive(pd, fd, 0, BASE_SPEED/2);
+            checkpoint += 1;
         }else if (checkpoint == 1 && (sensors & 0x1F) == 0b00000111){
             for (int i = 0; i < TURN_WAIT; i++){
                 motor_drive(pd, fd, BASE_SPEED, -BASE_SPEED);
