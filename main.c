@@ -6,11 +6,8 @@
 #include <stdlib.h>
 #include <signal.h>
 #include <unistd.h>
-#include <stdbool.h>
 #include <pigpiod_if2.h>
 #include <stdint.h>
-#include <strings.h>
-#include <bits/sigaction.h>
 
 #define S1 5
 #define S2 6
@@ -55,6 +52,9 @@
 // PWM 周波数を決めるレジスタ番号、100Hz なら 61 をセット
 #define PWM_PRESCALE 254
 
+#define BASE_SPEED 8
+#define TURN_WAIT 30
+
 void initHard(int *pd, int *fd);
 void sigHandler(int sig);
 int motor_drive(int pd, int fd, int lm, int rm);
@@ -65,7 +65,14 @@ volatile sig_atomic_t running = 1;
 int main(void){
     int pd, fd;
     int gpios[] = {S1, S2, S3, S4, S5};
-    uint8_t sensors = 0x00; //1バイトの変数のためcharを使っています。5つのセンサーをまとめてビット列で管理するためです.
+    uint8_t sensors = 0x00; //1バイトの変数のためuint8_tを使っています。5つのセンサーをまとめてビット列で管理するためです.
+    int checkpoint = 0;
+
+    /* checkpoint
+     *    s0→*******←1
+     *          *←2
+     *    g4→*******←3
+     */
 
     signal(SIGINT, sigHandler);
     signal(SIGTERM, sigHandler);
@@ -76,25 +83,35 @@ int main(void){
 
     while (running){
         readAllSensors(pd, gpios, &sensors);
-        printf("%x\n", sensors);
+        printf("sensors:%x checkpoint:%d\n", sensors, checkpoint);
 
         if ((sensors & 0x1F) == 0x1F){
             motor_drive(pd, fd, 0, 0);
         }else if ((sensors & 0x1F) == 0b00000100){
             // ↑.
-            motor_drive(pd, fd, 8, 8);
-        }else if ((sensors & 0x1F) == 0b00000010 || (sensors & 0x1F) == 0b00000011){
+            motor_drive(pd, fd, BASE_SPEED, BASE_SPEED);
+        }else if ((sensors & 0x1F) == 0b00000010){
             // ←↑.
-            motor_drive(pd, fd, 4, 10);
-        }else if ((sensors & 0x1F) == 0b00000001 || (sensors & 0x1F) == 0b00000110){
-            motor_drive(pd, fd, 3, 8);
-        }else if ((sensors & 0x1F) == 0b00001000 || (sensors & 0x1F) == 0b00001100){
-            motor_drive(pd, fd, 10, 4);
-        }else if ((sensors & 0x1F) == 0b00010000 || (sensors & 0x1F) == 0b00011000){
+            motor_drive(pd, fd, BASE_SPEED/2, BASE_SPEED);
+        }else if ((sensors & 0x1F) == 0b00001000){
             // ↑→.
-            motor_drive(pd, fd, 8, 3);
-        }else{
-            motor_drive(pd, fd, 8, -8);
+            motor_drive(pd, fd, BASE_SPEED, BASE_SPEED/2);
+        }else if (checkpoint == 1 && (sensors & 0x1F) == 0b00000111){
+            for (int i = 0; i < TURN_WAIT; i++){
+                motor_drive(pd, fd, BASE_SPEED, -BASE_SPEED);
+                time_sleep(0.1);
+            }
+        }else if (checkpoint == 2 && (sensors & 0x1F) == 0b00000000){
+            for (int i = 0; i < TURN_WAIT; i++){
+                motor_drive(pd, fd, BASE_SPEED, -BASE_SPEED);
+                time_sleep(0.1);
+            }
+        }else if (checkpoint == 4 && (sensors & 0x1F) == 0b00000000){
+            motor_drive(pd, fd, 0, 0);
+            break;
+        }else if ((sensors & 0x1F) == 0b00000000){
+            motor_drive(pd, fd, BASE_SPEED, -BASE_SPEED);
+            checkpoint += 1;
         }
 
         time_sleep(0.01);
