@@ -34,16 +34,16 @@
 #define MOTOR_MAX  16
 #define MOTOR_MIN -16
 
-#define BASE_SPEED 8
+#define BASE_SPEED 6
 
 /*
  * KP/KD はスケール済みエラー（重み×10）に対して作用する
  * turn = KP_NUM * error_scaled / KP_DEN + ...
  * 蛇行が多い場合: KP_NUMを下げる、KD_NUMを上げる、LPF_ALPHAを上げる
  */
-#define KP_NUM 3
+#define KP_NUM 1
 #define KP_DEN 10
-#define KD_NUM 5
+#define KD_NUM 3
 #define KD_DEN 10
 
 /*
@@ -226,6 +226,7 @@ void controlLineTracePD(int pd, int fd, uint8_t sensors)
     {
         g_state.lost_loops++;
 
+        /*
         if (g_state.lost_loops >= LOST_TIMEOUT_LOOPS)
         {
             printf("Line lost timeout. Stopping.\n");
@@ -233,21 +234,22 @@ void controlLineTracePD(int pd, int fd, uint8_t sensors)
             motor_drive(pd, fd, 0, 0);
             return;
         }
+        */
 
         if (g_state.last_error_sign < 0)
         {
-            left_speed  = -BASE_SPEED/2;
-            right_speed =  BASE_SPEED;
+            left_speed  = -4;
+            right_speed =  8;
         }
         else if (g_state.last_error_sign > 0)
         {
-            left_speed  =  BASE_SPEED;
-            right_speed = -BASE_SPEED/2;
+            left_speed  =  8;
+            right_speed = -4;
         }
         else
         {
-            left_speed  = BASE_SPEED/2;
-            right_speed = BASE_SPEED/2;
+            left_speed  = 4;
+            right_speed = 4;
         }
     }
 
