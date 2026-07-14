@@ -236,18 +236,18 @@ void controlLineTracePD(int pd, int fd, uint8_t sensors)
 
         if (g_state.last_error_sign < 0)
         {
-            left_speed  = -5;
-            right_speed =  8;
+            left_speed  = -BASE_SPEED/2;
+            right_speed =  BASE_SPEED;
         }
         else if (g_state.last_error_sign > 0)
         {
-            left_speed  =  8;
-            right_speed = -5;
+            left_speed  =  BASE_SPEED;
+            right_speed = -BASE_SPEED/2;
         }
         else
         {
-            left_speed  = 4;
-            right_speed = 4;
+            left_speed  = BASE_SPEED/2;
+            right_speed = BASE_SPEED/2;
         }
     }
 

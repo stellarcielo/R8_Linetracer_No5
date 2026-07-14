@@ -1,5 +1,5 @@
 CC = gcc
-BIN = main manual_drive
+BIN = main manual_drive main_t2
 CFLAGS = -Wall -pthread
 
 all:	$(BIN)
